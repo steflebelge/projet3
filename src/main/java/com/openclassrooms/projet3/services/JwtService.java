@@ -1,5 +1,6 @@
 package com.openclassrooms.projet3.services;
 
+import com.openclassrooms.projet3.auth.PrincipalView;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.*;
@@ -17,12 +18,16 @@ public class JwtService {
     }
 
     public String generateJwtToken(Authentication authentication) {
+        PrincipalView princpialView = (PrincipalView) authentication.getPrincipal();
+
         Instant now = Instant.now();
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer("self")
                 .issuedAt(now)
                 .expiresAt(now.plus(1, ChronoUnit.DAYS))
-                .subject(authentication.getName())
+                .subject(princpialView.email())
+                .claim("uid", String.valueOf(princpialView.id()))
+                .claim("name", princpialView.username())
                 .build();
 
         JwtEncoderParameters jwtEncoderParameters = JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims);

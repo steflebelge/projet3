@@ -24,14 +24,3 @@ public class UserModel {
 
     private Timestamp updated_at;
 }
-
-
-//todo
-//retour de get / getAll / create => 1 dto/ endpoint
-//Rajouter l utilisation du JWT
-//changer retour upload -> JSON
-//token key -> app.properties
-//routes users et messages
-
-//done
-//supprimer tables SESSION en base

@@ -18,6 +18,7 @@ public class UserController {
     /**
      * Read - Get a specific user from id
      * @return - An object of User type
+     * testé et OK
      */
     @GetMapping("/users/{id}")
     public Optional<UserModel> getUserById(@PathVariable Long id){

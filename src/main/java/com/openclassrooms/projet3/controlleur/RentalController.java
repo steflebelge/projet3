@@ -26,21 +26,17 @@ public class RentalController {
     /**
      * Read - Get all rentals
      * @return - An Iterable object of Rental fulfilled
+     * testé et OK
      */
     @GetMapping("/rentals")
     public Iterable<RentalModel> getRentals(){
-        System.out.println("fonction getrentals");
-
-        //========================================
-        //essayer d'arriver ici avec POSTMEN /login basic auth + recup token + utilisation du token sur /rentals
-        //========================================
-
         return rentalService.getRentals();
     }
 
     /**
      * Read - Get a specific rental from id
      * @return - An object of Rental type
+     * testé et OK
      */
     @GetMapping("/rentals/{id}")
     public Optional<RentalModel> getRentalById(@PathVariable Long id){
