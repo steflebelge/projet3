@@ -1,6 +1,6 @@
 package com.openclassrooms.projet3.controlleur;
 
-import com.openclassrooms.projet3.dto.UserRegisterDto;
+import com.openclassrooms.projet3.dto.registerUserDto;
 import com.openclassrooms.projet3.model.UserModel;
 import com.openclassrooms.projet3.repository.UserRepository;
 import com.openclassrooms.projet3.service.UserService;
@@ -42,12 +42,17 @@ public class AuthController {
      * @return Token ou 400
      */
     @PostMapping("/auth/register")
-    public ResponseEntity<String> registerUser(@RequestBody @Valid UserRegisterDto userRegisterDto){
+    public ResponseEntity<String> registerUser(@RequestBody @Valid registerUserDto userRegisterDto){
         // Vérifier si l'utilisateur existe déjà
         if (userService.findByName(userRegisterDto.getName()).isPresent()) {
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
                     .body("Un utilisateur avec ce nom existe déjà");
+        }
+        if (userService.findByEmail(userRegisterDto.getEmail()).isPresent()) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body("Un utilisateur avec cet email existe déjà");
         }
 
         // Création de l'utilisateur

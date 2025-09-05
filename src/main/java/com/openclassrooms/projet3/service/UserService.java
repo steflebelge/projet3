@@ -27,8 +27,11 @@ public class UserService {
         //??si user non trouvé ?
     }
 
-    public Optional<UserModel> findByName(String email) {
-        return userRepository.findByName(email);
+    public Optional<UserModel> findByName(String name) {
+        return userRepository.findByName(name);
+    }
+    public Optional<UserModel> findByEmail(String email) {
+        return userRepository.findByEmail(email);
     }
 
     public UserModel save(UserModel user) {
