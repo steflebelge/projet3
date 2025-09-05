@@ -1,5 +1,6 @@
 package com.openclassrooms.projet3.controlleur;
 
+import com.openclassrooms.projet3.dto.getCurrentUserDto;
 import com.openclassrooms.projet3.dto.registerUserDto;
 import com.openclassrooms.projet3.model.UserModel;
 import com.openclassrooms.projet3.repository.UserRepository;
@@ -83,13 +84,30 @@ public class AuthController {
 
     /**
      * GET - recupere les information de l'utilisateur courant
+     *
      * @param jwt
      * @return un user model
      */
     @GetMapping("/auth/me")
-    public Optional<UserModel> getCurrentUser(@AuthenticationPrincipal Jwt jwt) {
+    public ResponseEntity<getCurrentUserDto> getCurrentUser(@AuthenticationPrincipal Jwt jwt) {
         String id = jwt.getClaimAsString("uid");
-        Optional<UserModel> user = userRepository.findById(Long.valueOf(id));
-        return ResponseEntity.ok(user).getBody();
+        Optional<UserModel> userOpt = userRepository.findById(Long.valueOf(id));
+
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        UserModel user = userOpt.get();
+
+        // Transformation manuelle vers le DTO
+        getCurrentUserDto dto = new getCurrentUserDto();
+        dto.setId(user.getId());
+        dto.setEmail(user.getEmail());
+        dto.setName(user.getName());
+        dto.setPassword(user.getPassword());
+        dto.setCreatedAt(user.getCreated_at());
+        dto.setUpdatedAt(user.getUpdated_at());
+
+        return ResponseEntity.ok(dto);
     }
 }
