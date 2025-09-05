@@ -36,9 +36,12 @@ public class SpringSecurityConfig {
             HttpSecurity http,
             AuthenticationManager authManager) throws Exception {
         return http
+                .authorizeHttpRequests(auth ->  auth
+                        .requestMatchers("/auth/register").permitAll()
+                        .anyRequest().authenticated()
+                )
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
                 .httpBasic(Customizer.withDefaults())
                 .authenticationManager(authManager)
                 .oauth2ResourceServer((oauth2) -> oauth2.jwt(Customizer.withDefaults()))

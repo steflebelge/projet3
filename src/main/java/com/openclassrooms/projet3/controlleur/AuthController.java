@@ -1,17 +1,24 @@
 package com.openclassrooms.projet3.controlleur;
 
+import com.openclassrooms.projet3.dto.UserRegisterDto;
 import com.openclassrooms.projet3.model.UserModel;
 import com.openclassrooms.projet3.repository.UserRepository;
 import com.openclassrooms.projet3.service.UserService;
 import com.openclassrooms.projet3.services.JwtService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.sql.Timestamp;
 import java.util.Optional;
 
 @RestController
@@ -19,23 +26,54 @@ public class AuthController {
 
     @Autowired
     private UserService userService;
-    public JwtService jwtService;
     @Autowired
     private UserRepository userRepository;
+    public JwtService jwtService;
+    private final PasswordEncoder passwordEncoder;
 
-    public AuthController(JwtService jwtService) {
+
+    public AuthController(JwtService jwtService, PasswordEncoder passwordEncoder) {
         this.jwtService = jwtService;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    /**
+     * Post - register
+     * @return Token ou 400
+     */
+    @PostMapping("/auth/register")
+    public ResponseEntity<String> registerUser(@RequestBody @Valid UserRegisterDto userRegisterDto){
+        // Vérifier si l'utilisateur existe déjà
+        if (userService.findByName(userRegisterDto.getName()).isPresent()) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body("Un utilisateur avec ce nom existe déjà");
+        }
+
+        // Création de l'utilisateur
+        UserModel user = new UserModel();
+        user.setEmail(userRegisterDto.getEmail());
+        user.setName(userRegisterDto.getName());
+        user.setPassword(passwordEncoder.encode(userRegisterDto.getPassword())); // Hash du mot de passe
+        user.setCreated_at(new Timestamp(System.currentTimeMillis()));
+        user.setUpdated_at(new Timestamp(System.currentTimeMillis()));
+        userService.save(user);
+
+        String token = jwtService.generateJwtTokenForUser(user);
+
+        return ResponseEntity.ok(token);
     }
 
     /**
      * Post - Login via basic auth
+     *
      * @return le token ou 401
      * testé et OK
      */
     @PostMapping("/auth/login")
-    public String getToken(Authentication authentication) {
+    public ResponseEntity<String> getToken(Authentication authentication) {
         String token = jwtService.generateJwtToken(authentication);
-        return token;
+        return ResponseEntity.ok(token);
     }
 
     /**
@@ -47,6 +85,6 @@ public class AuthController {
     public Optional<UserModel> getCurrentUser(@AuthenticationPrincipal Jwt jwt) {
         String id = jwt.getClaimAsString("uid");
         Optional<UserModel> user = userRepository.findById(Long.valueOf(id));
-        return user;
+        return ResponseEntity.ok(user).getBody();
     }
 }

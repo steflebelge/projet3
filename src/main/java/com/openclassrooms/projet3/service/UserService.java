@@ -26,4 +26,12 @@ public class UserService {
         return userRepository.findById(id);
         //??si user non trouvé ?
     }
+
+    public Optional<UserModel> findByName(String email) {
+        return userRepository.findByName(email);
+    }
+
+    public UserModel save(UserModel user) {
+        return userRepository.save(user);
+    }
 }

@@ -16,7 +16,7 @@ public class MessageController {
 
     /**
      * Create - Add a new message
-     * @param message A Message object
+     * @param message A Message  object
      * @return The message object saved
      */
     @PostMapping("/messages")
