@@ -28,7 +28,6 @@ public class AuthController {
     @Autowired
     private UserService userService;
     @Autowired
-    private UserRepository userRepository;
     public JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
 
@@ -60,7 +59,7 @@ public class AuthController {
         UserModel user = new UserModel();
         user.setEmail(userRegisterDto.getEmail());
         user.setName(userRegisterDto.getName());
-        user.setPassword(passwordEncoder.encode(userRegisterDto.getPassword())); // Hash du mot de passe
+        user.setPassword(passwordEncoder.encode(userRegisterDto.getPassword()));
         user.setCreated_at(new Timestamp(System.currentTimeMillis()));
         user.setUpdated_at(new Timestamp(System.currentTimeMillis()));
         userService.save(user);
@@ -91,7 +90,7 @@ public class AuthController {
     @GetMapping("/auth/me")
     public ResponseEntity<getCurrentUserDto> getCurrentUser(@AuthenticationPrincipal Jwt jwt) {
         String id = jwt.getClaimAsString("uid");
-        Optional<UserModel> userOpt = userRepository.findById(Long.valueOf(id));
+        Optional<UserModel> userOpt = userService.getUser(Long.valueOf(id));
 
         if (userOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
