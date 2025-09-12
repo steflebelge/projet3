@@ -44,7 +44,7 @@ public class RentalService {
     }
 
 
-    public void deleteRental(Long id) {
-        rentalRepository.deleteById(id);
+    public void deleteRental(RentalModel rental) {
+        rentalRepository.delete(rental);
     }
 }

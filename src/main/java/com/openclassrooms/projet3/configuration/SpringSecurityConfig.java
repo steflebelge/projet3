@@ -37,7 +37,8 @@ public class SpringSecurityConfig {
             AuthenticationManager authManager) throws Exception {
         return http
                 .authorizeHttpRequests(auth ->  auth
-                        .requestMatchers("/auth/register").permitAll()
+                        .requestMatchers("/api/auth/register").permitAll()
+                        .requestMatchers("/api/auth/login").permitAll()
                         .anyRequest().authenticated()
                 )
                 .csrf(csrf -> csrf.disable())

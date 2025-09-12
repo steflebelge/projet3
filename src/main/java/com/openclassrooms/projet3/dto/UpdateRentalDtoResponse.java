@@ -6,7 +6,8 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 
 @Data
-public class getRentalByIdDto {
+public class UpdateRentalDtoResponse {
+
     private Long id;
 
     private String name;

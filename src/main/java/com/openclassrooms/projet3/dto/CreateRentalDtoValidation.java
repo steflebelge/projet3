@@ -7,7 +7,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 @Data
-public class updateRentalDto {
+public class CreateRentalDtoValidation {
 
     @Size(max = 255, message = "Le nom ne peut pas dépasser 255 caractères")
     private String name;

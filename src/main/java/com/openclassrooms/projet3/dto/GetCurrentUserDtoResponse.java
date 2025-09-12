@@ -5,7 +5,7 @@ import lombok.Data;
 import java.sql.Timestamp;
 
 @Data
-public class getCurrentUserDto {
+public class GetCurrentUserDtoResponse {
 
     private Long id;
 

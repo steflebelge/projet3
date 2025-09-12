@@ -1,9 +1,9 @@
 package com.openclassrooms.projet3.controlleur;
 
-import com.openclassrooms.projet3.dto.getCurrentUserDto;
-import com.openclassrooms.projet3.dto.registerUserDto;
+import com.openclassrooms.projet3.dto.GetCurrentUserDtoResponse;
+import com.openclassrooms.projet3.dto.LoginUserDtoValidation;
+import com.openclassrooms.projet3.dto.RegisterUserDtoValidation;
 import com.openclassrooms.projet3.model.UserModel;
-import com.openclassrooms.projet3.repository.UserRepository;
 import com.openclassrooms.projet3.service.UserService;
 import com.openclassrooms.projet3.services.JwtService;
 import jakarta.validation.Valid;
@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.sql.Timestamp;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -41,15 +43,15 @@ public class AuthController {
      * Post - register
      * @return Token ou 400
      */
-    @PostMapping("/auth/register")
-    public ResponseEntity<String> registerUser(@RequestBody @Valid registerUserDto userRegisterDto){
+    @PostMapping("/api/auth/register")
+    public ResponseEntity<Object> registerUser(@RequestBody @Valid RegisterUserDtoValidation registerUserDtoValidation){
         // Vérifier si l'utilisateur existe déjà
-        if (userService.findByName(userRegisterDto.getName()).isPresent()) {
+        if (userService.findByName(registerUserDtoValidation.getName()).isPresent()) {
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
                     .body("Un utilisateur avec ce nom existe déjà");
         }
-        if (userService.findByEmail(userRegisterDto.getEmail()).isPresent()) {
+        if (userService.findByEmail(registerUserDtoValidation.getEmail()).isPresent()) {
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
                     .body("Un utilisateur avec cet email existe déjà");
@@ -57,28 +59,41 @@ public class AuthController {
 
         // Création de l'utilisateur
         UserModel user = new UserModel();
-        user.setEmail(userRegisterDto.getEmail());
-        user.setName(userRegisterDto.getName());
-        user.setPassword(passwordEncoder.encode(userRegisterDto.getPassword()));
+        user.setEmail(registerUserDtoValidation.getEmail());
+        user.setName(registerUserDtoValidation.getName());
+        user.setPassword(passwordEncoder.encode(registerUserDtoValidation.getPassword()));
         user.setCreated_at(new Timestamp(System.currentTimeMillis()));
         user.setUpdated_at(new Timestamp(System.currentTimeMillis()));
         userService.save(user);
 
-        String token = jwtService.generateJwtTokenForUser(user);
+        Map<String, Object> json = new HashMap<>();
+        json.put("token", jwtService.generateJwtTokenForUser(user));
 
-        return ResponseEntity.ok(token);
+        return ResponseEntity.ok(json);
     }
 
     /**
      * Post - Login via basic auth
      *
      * @return le token ou 401
-     * testé et OK
      */
-    @PostMapping("/auth/login")
-    public ResponseEntity<String> getToken(Authentication authentication) {
-        String token = jwtService.generateJwtToken(authentication);
-        return ResponseEntity.ok(token);
+    @PostMapping("/api/auth/login")
+    public ResponseEntity<Object> getToken(@RequestBody @Valid LoginUserDtoValidation loginUserDtoValidation) {
+        Optional<UserModel> userOpt = userService.findByEmail(loginUserDtoValidation.getEmail());
+        if(userOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        UserModel user = userOpt.get();
+
+        if(!passwordEncoder.matches(loginUserDtoValidation.getPassword(), user.getPassword())) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String token = jwtService.generateJwtTokenForUser(user);
+        Map<String, Object> json = new HashMap<>();
+        json.put("token", token);
+        return ResponseEntity.ok(json);
     }
 
     /**
@@ -87,8 +102,8 @@ public class AuthController {
      * @param jwt
      * @return un user model
      */
-    @GetMapping("/auth/me")
-    public ResponseEntity<getCurrentUserDto> getCurrentUser(@AuthenticationPrincipal Jwt jwt) {
+    @GetMapping("/api/auth/me")
+    public ResponseEntity<GetCurrentUserDtoResponse> getCurrentUser(@AuthenticationPrincipal Jwt jwt) {
         String id = jwt.getClaimAsString("uid");
         Optional<UserModel> userOpt = userService.getUser(Long.valueOf(id));
 
@@ -99,14 +114,14 @@ public class AuthController {
         UserModel user = userOpt.get();
 
         // Transformation manuelle vers le DTO
-        getCurrentUserDto dto = new getCurrentUserDto();
-        dto.setId(user.getId());
-        dto.setEmail(user.getEmail());
-        dto.setName(user.getName());
-        dto.setPassword(user.getPassword());
-        dto.setCreatedAt(user.getCreated_at());
-        dto.setUpdatedAt(user.getUpdated_at());
+        GetCurrentUserDtoResponse getCurrentUserDtoResponse = new GetCurrentUserDtoResponse();
+        getCurrentUserDtoResponse.setId(user.getId());
+        getCurrentUserDtoResponse.setEmail(user.getEmail());
+        getCurrentUserDtoResponse.setName(user.getName());
+        getCurrentUserDtoResponse.setPassword(user.getPassword());
+        getCurrentUserDtoResponse.setCreatedAt(user.getCreated_at());
+        getCurrentUserDtoResponse.setUpdatedAt(user.getUpdated_at());
 
-        return ResponseEntity.ok(dto);
+        return ResponseEntity.ok(getCurrentUserDtoResponse);
     }
 }

@@ -2,6 +2,8 @@ package com.openclassrooms.projet3.service;
 
 import com.openclassrooms.projet3.model.UserModel;
 import com.openclassrooms.projet3.repository.UserRepository;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;

@@ -1,7 +1,6 @@
 package com.openclassrooms.projet3.controlleur;
 
-import com.openclassrooms.projet3.dto.getRentalByIdDto;
-import com.openclassrooms.projet3.dto.updateRentalDto;
+import com.openclassrooms.projet3.dto.*;
 import com.openclassrooms.projet3.model.RentalModel;
 import com.openclassrooms.projet3.service.RentalService;
 import jakarta.validation.Valid;
@@ -31,27 +30,26 @@ public class RentalController {
 
     /**
      * Read - Get all rentals
-     * @return - An Iterable object of Rental fulfilled
-     * testé et OK
+     * @return - An Iterable object of GetRentalByIdDto items
      */
-    @GetMapping("/rentals")
-    public ResponseEntity<List<getRentalByIdDto>> getRentals() {
+    @GetMapping("/api/rentals")
+    public ResponseEntity<List<GetRentalByIdDtoResponse>> getRentals() {
         Iterable<RentalModel> rentals = rentalService.getRentals();
 
-        List<getRentalByIdDto> dtoList = new ArrayList<>();
+        List<GetRentalByIdDtoResponse> dtoList = new ArrayList<>();
         for (RentalModel rental : rentals) {
-            getRentalByIdDto dto = new getRentalByIdDto();
-            dto.setId(rental.getId());
-            dto.setName(rental.getName());
-            dto.setSurface(rental.getSurface());
-            dto.setPrice(rental.getPrice());
-            dto.setPicture(rental.getPicture());
-            dto.setDescription(rental.getDescription());
-            dto.setOwnerId(rental.getOwner_id());
-            dto.setCreatedAt(rental.getCreated_at());
-            dto.setUpdatedAt(rental.getUpdated_at());
+            GetRentalByIdDtoResponse getRentalByIdDtoResponse = new GetRentalByIdDtoResponse();
+            getRentalByIdDtoResponse.setId(rental.getId());
+            getRentalByIdDtoResponse.setName(rental.getName());
+            getRentalByIdDtoResponse.setSurface(rental.getSurface());
+            getRentalByIdDtoResponse.setPrice(rental.getPrice());
+            getRentalByIdDtoResponse.setPicture(rental.getPicture());
+            getRentalByIdDtoResponse.setDescription(rental.getDescription());
+            getRentalByIdDtoResponse.setOwnerId(rental.getOwner_id());
+            getRentalByIdDtoResponse.setCreatedAt(rental.getCreated_at());
+            getRentalByIdDtoResponse.setUpdatedAt(rental.getUpdated_at());
 
-            dtoList.add(dto);
+            dtoList.add(getRentalByIdDtoResponse);
         }
 
         return ResponseEntity.ok(dtoList);
@@ -59,35 +57,35 @@ public class RentalController {
 
     /**
      * Read - Get a specific rental from id
-     * @return - An object of Rental type
-     * testé et OK
+     * @param id of the rental needed
+     * @return A GetRentalByIdDto of the rental object
      */
-    @GetMapping("/rentals/{id}")
-    public ResponseEntity<getRentalByIdDto> getRentalById(@PathVariable Long id){
+    @GetMapping("/api/rentals/{id}")
+    public ResponseEntity<GetRentalByIdDtoResponse> getRentalById(@PathVariable Long id){
         Optional<RentalModel> rentalOpt = rentalService.getRental(id);
         if(rentalOpt.isEmpty()){
             return ResponseEntity.notFound().build();
         }
 
         RentalModel rental = rentalOpt.get();
-        getRentalByIdDto dto = new getRentalByIdDto();
-        dto.setId(rental.getId());
-        dto.setName(rental.getName());
-        dto.setSurface(rental.getSurface());
-        dto.setPrice(rental.getPrice());
-        dto.setPicture(rental.getPicture());
-        dto.setDescription(rental.getDescription());
-        dto.setOwnerId(rental.getOwner_id());
-        dto.setCreatedAt(rental.getCreated_at());
-        dto.setUpdatedAt(rental.getUpdated_at());
+        GetRentalByIdDtoResponse getRentalByIdDtoResponse = new GetRentalByIdDtoResponse();
+        getRentalByIdDtoResponse.setId(rental.getId());
+        getRentalByIdDtoResponse.setName(rental.getName());
+        getRentalByIdDtoResponse.setSurface(rental.getSurface());
+        getRentalByIdDtoResponse.setPrice(rental.getPrice());
+        getRentalByIdDtoResponse.setPicture(rental.getPicture());
+        getRentalByIdDtoResponse.setDescription(rental.getDescription());
+        getRentalByIdDtoResponse.setOwnerId(rental.getOwner_id());
+        getRentalByIdDtoResponse.setCreatedAt(rental.getCreated_at());
+        getRentalByIdDtoResponse.setUpdatedAt(rental.getUpdated_at());
 
-        return ResponseEntity.ok(dto);
+        return ResponseEntity.ok(getRentalByIdDtoResponse);
     }
 
     /**
      * Upload - upload an image file
      */
-    @PostMapping("/upload")
+    @PostMapping("/api/upload")
     public ResponseEntity<String> uploadRental(@RequestParam("file") MultipartFile file) throws Exception {
         if (file.isEmpty()) {
             throw new Exception("Aucun fichier reçu");
@@ -119,29 +117,44 @@ public class RentalController {
 
     /**
      * Create - Add a new rental
-     * @param newRental A Rental object
-     * @return The rental object saved
+     * @param createRentalDtoValidation A CreateRentalDto object
+     * @return A CreateRentalDtoResponse of the new rental object
      */
-    @PostMapping("/rentals")
-    public ResponseEntity<getRentalByIdDto> createRental(@RequestBody RentalModel newRental){
-        RentalModel rentalOpt = rentalService.saveRental(newRental);
+    @PostMapping("/api/rentals")
+    public ResponseEntity<CreateRentalDtoResponse> createRental(@RequestBody @Valid CreateRentalDtoValidation createRentalDtoValidation){
+        RentalModel newRental = new RentalModel();
+        newRental.setName(createRentalDtoValidation.getName());
+        newRental.setSurface(createRentalDtoValidation.getSurface());
+        newRental.setPrice(createRentalDtoValidation.getPrice());
+        newRental.setPicture(createRentalDtoValidation.getPicture());
+        newRental.setDescription(createRentalDtoValidation.getDescription());
+        newRental.setOwner_id(createRentalDtoValidation.getOwnerId());
+        newRental.setCreated_at(new Timestamp(System.currentTimeMillis()));
+        newRental.setUpdated_at(new Timestamp(System.currentTimeMillis()));
 
-        getRentalByIdDto dto = new getRentalByIdDto();
-        dto.setId(rentalOpt.getId());
-        dto.setName(rentalOpt.getName());
-        dto.setSurface(rentalOpt.getSurface());
-        dto.setPrice(rentalOpt.getPrice());
-        dto.setPicture(rentalOpt.getPicture());
-        dto.setDescription(rentalOpt.getDescription());
-        dto.setOwnerId(rentalOpt.getOwner_id());
-        dto.setCreatedAt(rentalOpt.getCreated_at());
-        dto.setUpdatedAt(rentalOpt.getUpdated_at());
+        RentalModel savedRental = rentalService.saveRental(newRental);
 
-        return ResponseEntity.ok(dto);
+        CreateRentalDtoResponse createRentalDtoResponse = new CreateRentalDtoResponse();
+        createRentalDtoResponse.setId(savedRental.getId());
+        createRentalDtoResponse.setName(savedRental.getName());
+        createRentalDtoResponse.setSurface(savedRental.getSurface());
+        createRentalDtoResponse.setPrice(savedRental.getPrice());
+        createRentalDtoResponse.setPicture(savedRental.getPicture());
+        createRentalDtoResponse.setDescription(savedRental.getDescription());
+        createRentalDtoResponse.setOwnerId(savedRental.getOwner_id());
+        createRentalDtoResponse.setCreatedAt(savedRental.getCreated_at());
+        createRentalDtoResponse.setUpdatedAt(savedRental.getUpdated_at());
+
+        return ResponseEntity.ok(createRentalDtoResponse);
     }
 
-    @PutMapping("/rentals/{id}")
-    public ResponseEntity<getRentalByIdDto> updateRental(@PathVariable Long id, @RequestBody @Valid updateRentalDto updateRentalDto){
+    /**
+     * Update - Update an existing rental
+     * @param updateRentalDtoValidation A UpdateRentalDtoValidation object
+     * @return A UpdateRentalDtoValidation of the rental object
+     */
+    @PutMapping("/api/rentals/{id}")
+    public ResponseEntity<UpdateRentalDtoResponse> updateRental(@PathVariable Long id, @RequestBody @Valid UpdateRentalDtoValidation updateRentalDtoValidation){
 
         Optional<RentalModel> rentalOpt = rentalService.getRental(id);
         if (rentalOpt.isEmpty()) {
@@ -151,12 +164,12 @@ public class RentalController {
         RentalModel rental = rentalOpt.get();
 
         // Mise à jour manuelle uniquement des champs non nuls du DTO
-        if (updateRentalDto.getName() != null) rental.setName(updateRentalDto.getName());
-        if (updateRentalDto.getSurface() != null) rental.setSurface(updateRentalDto.getSurface());
-        if (updateRentalDto.getPrice() != null) rental.setPrice(updateRentalDto.getPrice());
-        if (updateRentalDto.getPicture() != null) rental.setPicture(updateRentalDto.getPicture());
-        if (updateRentalDto.getDescription() != null) rental.setDescription(updateRentalDto.getDescription());
-        if (updateRentalDto.getOwnerId() != null) rental.setOwner_id(updateRentalDto.getOwnerId());
+        if (updateRentalDtoValidation.getName() != null) rental.setName(updateRentalDtoValidation.getName());
+        if (updateRentalDtoValidation.getSurface() != null) rental.setSurface(updateRentalDtoValidation.getSurface());
+        if (updateRentalDtoValidation.getPrice() != null) rental.setPrice(updateRentalDtoValidation.getPrice());
+        if (updateRentalDtoValidation.getPicture() != null) rental.setPicture(updateRentalDtoValidation.getPicture());
+        if (updateRentalDtoValidation.getDescription() != null) rental.setDescription(updateRentalDtoValidation.getDescription());
+        if (updateRentalDtoValidation.getOwnerId() != null) rental.setOwner_id(updateRentalDtoValidation.getOwnerId());
         // Mettre à jour la date de modification
         rental.setUpdated_at(new Timestamp(System.currentTimeMillis()));
 
@@ -164,28 +177,37 @@ public class RentalController {
         RentalModel updatedRental = rentalService.saveRental(rental);
 
         // Transformation en DTO de sortie
-        getRentalByIdDto responseDto = new getRentalByIdDto();
-        responseDto.setId(updatedRental.getId());
-        responseDto.setName(updatedRental.getName());
-        responseDto.setSurface(updatedRental.getSurface());
-        responseDto.setPrice(updatedRental.getPrice());
-        responseDto.setPicture(updatedRental.getPicture());
-        responseDto.setDescription(updatedRental.getDescription());
-        responseDto.setOwnerId(updatedRental.getOwner_id());
-        responseDto.setCreatedAt(updatedRental.getCreated_at());
-        responseDto.setUpdatedAt(updatedRental.getUpdated_at());
+        UpdateRentalDtoResponse updateRentalDtoResponse = new UpdateRentalDtoResponse();
+        updateRentalDtoResponse.setId(updatedRental.getId());
+        updateRentalDtoResponse.setName(updatedRental.getName());
+        updateRentalDtoResponse.setSurface(updatedRental.getSurface());
+        updateRentalDtoResponse.setPrice(updatedRental.getPrice());
+        updateRentalDtoResponse.setPicture(updatedRental.getPicture());
+        updateRentalDtoResponse.setDescription(updatedRental.getDescription());
+        updateRentalDtoResponse.setOwnerId(updatedRental.getOwner_id());
+        updateRentalDtoResponse.setCreatedAt(updatedRental.getCreated_at());
+        updateRentalDtoResponse.setUpdatedAt(updatedRental.getUpdated_at());
 
-        return ResponseEntity.ok(responseDto);
+        return ResponseEntity.ok(updateRentalDtoResponse);
     }
 
     /**
      * Delete - Remove a rental
+     *
      * @param id - The id of the rental to delete
+     * @return 404 or 200
      */
-    @DeleteMapping("/rentals/{id}")
-    public void deleteRental(@PathVariable Long id){
-        rentalService.deleteRental(id);
-        //cas id non correct
-        //renvoi un 200
+    @DeleteMapping("/api/rentals/{id}")
+    public ResponseEntity<Object> deleteRental(@PathVariable Long id){
+
+        Optional<RentalModel> rentalOpt = rentalService.getRental(id);
+        if (rentalOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        RentalModel rental = rentalOpt.get();
+
+        rentalService.deleteRental(rental);
+        return ResponseEntity.ok().build();
     }
 }
