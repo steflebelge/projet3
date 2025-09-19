@@ -10,21 +10,19 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.Operation;
 import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
 @RestController
+@RequestMapping("/api/auth")
 public class AuthController {
 
     @Autowired
@@ -43,7 +41,8 @@ public class AuthController {
      * Post - register
      * @return Token ou 400
      */
-    @PostMapping("/api/auth/register")
+    @PostMapping("/register")
+    @Operation(summary = "Endpoint public", security = {})
     public ResponseEntity<Object> registerUser(@RequestBody @Valid RegisterUserDtoValidation registerUserDtoValidation){
         // Vérifier si l'utilisateur existe déjà
         if (userService.findByName(registerUserDtoValidation.getName()).isPresent()) {
@@ -77,7 +76,8 @@ public class AuthController {
      *
      * @return le token ou 401
      */
-    @PostMapping("/api/auth/login")
+    @PostMapping("/login")
+    @Operation(summary = "Endpoint public", security = {})
     public ResponseEntity<Object> getToken(@RequestBody @Valid LoginUserDtoValidation loginUserDtoValidation) {
         Optional<UserModel> userOpt = userService.findByEmail(loginUserDtoValidation.getEmail());
         if(userOpt.isEmpty()) {
@@ -102,7 +102,7 @@ public class AuthController {
      * @param jwt
      * @return un user model
      */
-    @GetMapping("/api/auth/me")
+    @GetMapping("/me")
     public ResponseEntity<GetCurrentUserDtoResponse> getCurrentUser(@AuthenticationPrincipal Jwt jwt) {
         String id = jwt.getClaimAsString("uid");
         Optional<UserModel> userOpt = userService.getUser(Long.valueOf(id));

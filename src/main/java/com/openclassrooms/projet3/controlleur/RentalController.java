@@ -2,17 +2,21 @@ package com.openclassrooms.projet3.controlleur;
 
 import com.openclassrooms.projet3.dto.*;
 import com.openclassrooms.projet3.model.RentalModel;
+import com.openclassrooms.projet3.model.UserModel;
 import com.openclassrooms.projet3.service.RentalService;
+import com.openclassrooms.projet3.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,17 +27,29 @@ import java.util.UUID;
 @RestController
 public class RentalController {
 
+    private final String uploadDir = System.getProperty("user.dir") + "/uploads";
     @Autowired
     private RentalService rentalService;
+    @Autowired
+    private UserService userService;
 
-    private static final String UPLOAD_DIR = "uploads/";
+    public RentalController(RentalService rentalService) {
+        this.rentalService = rentalService;
+
+        // Crée le dossier s'il n'existe pas
+        File uploadFolder = new File(uploadDir);
+        if (!uploadFolder.exists()) {
+            uploadFolder.mkdirs();
+        }
+    }
 
     /**
      * Read - Get all rentals
+     *
      * @return - An Iterable object of GetRentalByIdDto items
      */
     @GetMapping("/api/rentals")
-    public ResponseEntity<List<GetRentalByIdDtoResponse>> getRentals() {
+    public ResponseEntity<GetAllRentalsResponseDto> getRentals() {
         Iterable<RentalModel> rentals = rentalService.getRentals();
 
         List<GetRentalByIdDtoResponse> dtoList = new ArrayList<>();
@@ -52,18 +68,21 @@ public class RentalController {
             dtoList.add(getRentalByIdDtoResponse);
         }
 
-        return ResponseEntity.ok(dtoList);
+        GetAllRentalsResponseDto response = new GetAllRentalsResponseDto(dtoList);
+
+        return ResponseEntity.ok(response);
     }
 
     /**
      * Read - Get a specific rental from id
+     *
      * @param id of the rental needed
      * @return A GetRentalByIdDto of the rental object
      */
     @GetMapping("/api/rentals/{id}")
-    public ResponseEntity<GetRentalByIdDtoResponse> getRentalById(@PathVariable Long id){
+    public ResponseEntity<GetRentalByIdDtoResponse> getRentalById(@PathVariable Long id) {
         Optional<RentalModel> rentalOpt = rentalService.getRental(id);
-        if(rentalOpt.isEmpty()){
+        if (rentalOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
@@ -83,52 +102,58 @@ public class RentalController {
     }
 
     /**
-     * Upload - upload an image file
-     */
-    @PostMapping("/api/upload")
-    public ResponseEntity<String> uploadRental(@RequestParam("file") MultipartFile file) throws Exception {
-        if (file.isEmpty()) {
-            throw new Exception("Aucun fichier reçu");
-        }
-
-        String contentType = file.getContentType();
-        if (contentType == null || !contentType.startsWith("image/")) {
-            throw new Exception("Le fichier n'est pas une image valide");
-        }
-
-        try{
-            //création d'un nom de fichier aléatoire
-            String originalFilename = file.getOriginalFilename();
-            String extension = "";
-            int i = originalFilename.lastIndexOf('.');
-            if (i > 0) {
-                extension = originalFilename.substring(i);
-            }
-            String randomFileName = UUID.randomUUID() + extension;
-            Path path = Paths.get(UPLOAD_DIR + randomFileName);
-            //ecriture du fichier
-            Files.write(path, file.getBytes());
-
-            return ResponseEntity.ok("Fichier uploadé avec succès : " + path);
-        } catch (IOException e) {
-            return ResponseEntity.status(500).body("Erreur lors de l'upload : " + e.getMessage());
-        }
-    }
-
-    /**
      * Create - Add a new rental
+     *
      * @param createRentalDtoValidation A CreateRentalDto object
      * @return A CreateRentalDtoResponse of the new rental object
      */
-    @PostMapping("/api/rentals")
-    public ResponseEntity<CreateRentalDtoResponse> createRental(@RequestBody @Valid CreateRentalDtoValidation createRentalDtoValidation){
+    @PostMapping(path = "/api/rentals", consumes = "multipart/form-data")
+    public ResponseEntity<CreateRentalDtoResponse> createRental(
+            @ModelAttribute @Valid CreateRentalDtoValidation createRentalDtoValidation,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        String id = jwt.getClaimAsString("uid");
+        Optional<UserModel> userOpt = userService.getUser(Long.valueOf(id));
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        UserModel user = userOpt.get();
+
+        String savedFileName = null;
+        // Si l'image est manquante
+        MultipartFile pictureFile = createRentalDtoValidation.getPicture();
+        if (pictureFile.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        try {
+            // Générer un nom unique pour éviter les collisions
+            String extension = "";
+            String originalName = pictureFile.getOriginalFilename();
+            if (originalName.isEmpty() || !originalName.contains(".")) {
+                return ResponseEntity.badRequest().build();
+            }
+            extension = originalName.substring(originalName.lastIndexOf("."));
+            savedFileName = UUID.randomUUID() + extension;
+
+            // Sauvegarder sur le disque
+            File dest = new File(uploadDir + File.separator + savedFileName);
+            pictureFile.transferTo(dest);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .build();
+        }
+
+        String baseUrl = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
+        String fileUrl = baseUrl + "/uploads/" + savedFileName;
+
         RentalModel newRental = new RentalModel();
         newRental.setName(createRentalDtoValidation.getName());
         newRental.setSurface(createRentalDtoValidation.getSurface());
         newRental.setPrice(createRentalDtoValidation.getPrice());
-        newRental.setPicture(createRentalDtoValidation.getPicture());
+        newRental.setPicture(fileUrl);
         newRental.setDescription(createRentalDtoValidation.getDescription());
-        newRental.setOwner_id(createRentalDtoValidation.getOwnerId());
+        newRental.setOwner_id(Math.toIntExact(user.getId()));
         newRental.setCreated_at(new Timestamp(System.currentTimeMillis()));
         newRental.setUpdated_at(new Timestamp(System.currentTimeMillis()));
 
@@ -150,11 +175,14 @@ public class RentalController {
 
     /**
      * Update - Update an existing rental
+     *
      * @param updateRentalDtoValidation A UpdateRentalDtoValidation object
      * @return A UpdateRentalDtoValidation of the rental object
      */
-    @PutMapping("/api/rentals/{id}")
-    public ResponseEntity<UpdateRentalDtoResponse> updateRental(@PathVariable Long id, @RequestBody @Valid UpdateRentalDtoValidation updateRentalDtoValidation){
+    @PutMapping(path = "/api/rentals/{id}", consumes = "multipart/form-data")
+    public ResponseEntity<UpdateRentalDtoResponse> updateRental(
+            @PathVariable Long id,
+            @ModelAttribute @Valid UpdateRentalDtoValidation updateRentalDtoValidation) {
 
         Optional<RentalModel> rentalOpt = rentalService.getRental(id);
         if (rentalOpt.isEmpty()) {
@@ -163,13 +191,43 @@ public class RentalController {
 
         RentalModel rental = rentalOpt.get();
 
+        // verifie si l user courant est l owner ID
+
+        String savedFileName = null;
+        // Si l'image est présente
+        MultipartFile pictureFile = updateRentalDtoValidation.getPicture();
+        String fileUrl = null;
+        if (!pictureFile.isEmpty()) {
+            try {
+                // Générer un nom unique pour éviter les collisions
+                String extension = "";
+                String originalName = pictureFile.getOriginalFilename();
+                if (originalName.isEmpty() || !originalName.contains(".")) {
+                    return ResponseEntity.badRequest().build();
+                }
+                extension = originalName.substring(originalName.lastIndexOf("."));
+                savedFileName = UUID.randomUUID() + extension;
+
+                // Sauvegarder sur le disque
+                File dest = new File(uploadDir + File.separator + savedFileName);
+                pictureFile.transferTo(dest);
+            } catch (IOException e) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .build();
+            }
+
+            String baseUrl = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
+            fileUrl = baseUrl + "/uploads/" + savedFileName;
+        }
+
         // Mise à jour manuelle uniquement des champs non nuls du DTO
         if (updateRentalDtoValidation.getName() != null) rental.setName(updateRentalDtoValidation.getName());
         if (updateRentalDtoValidation.getSurface() != null) rental.setSurface(updateRentalDtoValidation.getSurface());
         if (updateRentalDtoValidation.getPrice() != null) rental.setPrice(updateRentalDtoValidation.getPrice());
-        if (updateRentalDtoValidation.getPicture() != null) rental.setPicture(updateRentalDtoValidation.getPicture());
-        if (updateRentalDtoValidation.getDescription() != null) rental.setDescription(updateRentalDtoValidation.getDescription());
-        if (updateRentalDtoValidation.getOwnerId() != null) rental.setOwner_id(updateRentalDtoValidation.getOwnerId());
+        if (!pictureFile.isEmpty()) rental.setPicture(fileUrl);
+        if (updateRentalDtoValidation.getDescription() != null)
+            rental.setDescription(updateRentalDtoValidation.getDescription());
+//        if (updateRentalDtoValidation.getOwnerId() != null) rental.setOwner_id(updateRentalDtoValidation.getOwnerId());
         // Mettre à jour la date de modification
         rental.setUpdated_at(new Timestamp(System.currentTimeMillis()));
 
@@ -198,12 +256,14 @@ public class RentalController {
      * @return 404 or 200
      */
     @DeleteMapping("/api/rentals/{id}")
-    public ResponseEntity<Object> deleteRental(@PathVariable Long id){
+    public ResponseEntity<Object> deleteRental(@PathVariable Long id) {
 
         Optional<RentalModel> rentalOpt = rentalService.getRental(id);
         if (rentalOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
+
+        // verifie si l user courant est l owner ID
 
         RentalModel rental = rentalOpt.get();
 
