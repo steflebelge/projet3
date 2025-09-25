@@ -8,10 +8,10 @@ import com.openclassrooms.projet3.service.UserService;
 import com.openclassrooms.projet3.utils.DateUtils;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -19,15 +19,14 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.io.File;
 import java.io.IOException;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
-
+// Définition d'un controlleur REST pour la gestion des locations
+// Gère tout les endpoints commencant par '/api/rentals'
 @RestController
 public class RentalController {
 
+    // Injection et initalisation des dépendances néccessaires
     private final String uploadDir = System.getProperty("user.dir") + "/uploads";
     @Autowired
     private RentalService rentalService;
@@ -37,7 +36,7 @@ public class RentalController {
     public RentalController(RentalService rentalService) {
         this.rentalService = rentalService;
 
-        // Crée le dossier s'il n'existe pas
+        // Crée le dossier d'uploads s'il n'existe pas
         File uploadFolder = new File(uploadDir);
         if (!uploadFolder.exists()) {
             uploadFolder.mkdirs();
@@ -45,15 +44,20 @@ public class RentalController {
     }
 
     /**
+     * Déclaration de la route de récupération des locations
      * Read - Get all rentals
      *
      * @return - An Iterable object of GetRentalByIdDto items
      */
     @GetMapping("/api/rentals")
     public ResponseEntity<GetAllRentalsResponseDto> getRentals() {
+        //Deamnde au service de la liste des locations en base
         Iterable<RentalModel> rentals = rentalService.getRentals();
 
+        // Création d'une liste de DTO pour la réponse
         List<GetRentalByIdDtoResponse> dtoList = new ArrayList<>();
+
+        // Pour chaque location, on crée le DTO correspondant et on l'ajoute a la liste de la réponse
         for (RentalModel rental : rentals) {
             GetRentalByIdDtoResponse getRentalByIdDtoResponse = new GetRentalByIdDtoResponse();
             getRentalByIdDtoResponse.setId(rental.getId());
@@ -71,23 +75,34 @@ public class RentalController {
 
         GetAllRentalsResponseDto response = new GetAllRentalsResponseDto(dtoList);
 
+        // On renvoi la réponse
         return ResponseEntity.ok(response);
     }
 
     /**
+     * Déclaration de la route de récuperation d'une location via son id
      * Read - Get a specific rental from id
      *
      * @param id of the rental needed
      * @return A GetRentalByIdDto of the rental object
      */
     @GetMapping("/api/rentals/{id}")
-    public ResponseEntity<GetRentalByIdDtoResponse> getRentalById(@PathVariable Long id) {
+    public ResponseEntity<Object> getRentalById(@PathVariable Long id) {
+        // Récupération de la location via l'id fournit
         Optional<RentalModel> rentalOpt = rentalService.getRental(id);
+
+        // Si il n'existe pas on retourne une erreur
         if (rentalOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
+            String res = "L'id demandé ne corresponds a aucune location.";
+            Map<String, Object> json = new HashMap<>();
+            json.put("message", res);
+            return ResponseEntity.badRequest().body(json);
         }
 
+        //Sinon on récupere le RentalModel correspondant
         RentalModel rental = rentalOpt.get();
+
+        //Puis on génère le DTO de la réponse
         GetRentalByIdDtoResponse getRentalByIdDtoResponse = new GetRentalByIdDtoResponse();
         getRentalByIdDtoResponse.setId(rental.getId());
         getRentalByIdDtoResponse.setName(rental.getName());
@@ -99,41 +114,67 @@ public class RentalController {
         getRentalByIdDtoResponse.setCreatedAt(DateUtils.formatTimestamp(rental.getCreated_at()));
         getRentalByIdDtoResponse.setUpdatedAt(DateUtils.formatTimestamp(rental.getUpdated_at()));
 
+        // On renvoi la réponse
         return ResponseEntity.ok(getRentalByIdDtoResponse);
     }
 
     /**
+     * Déclaration de la route de création d'une location
      * Create - Add a new rental
      *
      * @param createRentalDtoValidation A CreateRentalDto object
      * @return A CreateRentalDtoResponse of the new rental object
      */
     @PostMapping(path = "/api/rentals", consumes = "multipart/form-data")
-    public ResponseEntity<CreateRentalDtoResponse> createRental(
+    public ResponseEntity<Object> createRental(
             @ModelAttribute @Valid CreateRentalDtoValidation createRentalDtoValidation,
-            @AuthenticationPrincipal Jwt jwt
+            @AuthenticationPrincipal Jwt jwt,
+            BindingResult bindingResult
     ) {
+        if (bindingResult.hasErrors()) {
+            String res = "Une erreur a été detectée lors de la validation des informations renseignées.";
+            Map<String, Object> json = new HashMap<>();
+            json.put("message", res);
+            return ResponseEntity.badRequest().body(json);
+        }
+
+        // On essaye de récuperer l'utilisateur a partir de l'id contenu dans son JWT
         String id = jwt.getClaimAsString("uid");
         Optional<UserModel> userOpt = userService.getUser(Long.valueOf(id));
+        // Si il n'existe pas, on renvoi une erreur
         if (userOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
+            String res = "Vous devez etre connecté pour réaliser cette action.";
+            Map<String, Object> json = new HashMap<>();
+            json.put("message", res);
+            return ResponseEntity.badRequest().body(json);
         }
+        //Sinon on récupère le UserModel correspondant
         UserModel user = userOpt.get();
 
-        String savedFileName = null;
-        // Si l'image est manquante
+        // Si l'image est manquante on retourne une erreur
         MultipartFile pictureFile = createRentalDtoValidation.getPicture();
         if (pictureFile.isEmpty()) {
-            return ResponseEntity.badRequest().build();
+            String res = "Un fichier image est requis.";
+            Map<String, Object> json = new HashMap<>();
+            json.put("message", res);
+            return ResponseEntity.badRequest().body(json);
         }
 
+        String savedFileName = null;
+        // Gestion de l'enregistrement de l'image dans le systeme de fichiers
         try {
-            // Générer un nom unique pour éviter les collisions
             String extension = "";
             String originalName = pictureFile.getOriginalFilename();
-            if (originalName.isEmpty() || !originalName.contains(".")) {
-                return ResponseEntity.badRequest().build();
+
+            String contentType = pictureFile.getContentType();
+            if (contentType.isEmpty() || !contentType.startsWith("image/")) {
+                String res = "Un fichier image est requis.";
+                Map<String, Object> json = new HashMap<>();
+                json.put("message", res);
+                return ResponseEntity.badRequest().body(json);
             }
+
+            // On crée un nom de fichier a partir d'une chaine aléatoire et de l'extension
             extension = originalName.substring(originalName.lastIndexOf("."));
             savedFileName = UUID.randomUUID() + extension;
 
@@ -141,13 +182,18 @@ public class RentalController {
             File dest = new File(uploadDir + File.separator + savedFileName);
             pictureFile.transferTo(dest);
         } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .build();
+            // En cas d'erreur, on retourne le prolème rencontré
+            String res = "Erreur : " + e.getMessage();
+            Map<String, Object> json = new HashMap<>();
+            json.put("message", res);
+            return ResponseEntity.badRequest().body(json);
         }
 
+        // Création de l'url du fichier qui sera stocké en base
         String baseUrl = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
         String fileUrl = baseUrl + "/uploads/" + savedFileName;
 
+        // On crée le RentalModel correspondant aux données recues
         RentalModel newRental = new RentalModel();
         newRental.setName(createRentalDtoValidation.getName());
         newRental.setSurface(createRentalDtoValidation.getSurface());
@@ -158,8 +204,10 @@ public class RentalController {
         newRental.setCreated_at(new Timestamp(System.currentTimeMillis()));
         newRental.setUpdated_at(new Timestamp(System.currentTimeMillis()));
 
+        // On l'enregistre en base
         RentalModel savedRental = rentalService.saveRental(newRental);
 
+        // On prépare la réponse
         CreateRentalDtoResponse createRentalDtoResponse = new CreateRentalDtoResponse();
         createRentalDtoResponse.setId(savedRental.getId());
         createRentalDtoResponse.setName(savedRental.getName());
@@ -171,55 +219,69 @@ public class RentalController {
         createRentalDtoResponse.setCreatedAt(DateUtils.formatTimestamp(savedRental.getCreated_at()));
         createRentalDtoResponse.setUpdatedAt(DateUtils.formatTimestamp(savedRental.getUpdated_at()));
 
-        return ResponseEntity.ok(createRentalDtoResponse);
+        // On retourne la réponse
+        String res = "Rental created successfully";
+        Map<String, Object> json = new HashMap<>();
+        json.put("message", res);
+        return ResponseEntity.ok(json);
     }
 
     /**
+     * Déclaration de la route de mise a jour d'une location
      * Update - Update an existing rental
      *
      * @param updateRentalDtoValidation A UpdateRentalDtoValidation object
      * @return A UpdateRentalDtoValidation of the rental object
      */
     @PutMapping(path = "/api/rentals/{idRental}", consumes = "multipart/form-data")
-    public ResponseEntity<UpdateRentalDtoResponse> updateRental(
+    public ResponseEntity<Object> updateRental(
             @PathVariable Long idRental,
             @AuthenticationPrincipal Jwt jwt,
-            @ModelAttribute @Valid UpdateRentalDtoValidation updateRentalDtoValidation) {
+            @ModelAttribute @Valid UpdateRentalDtoValidation updateRentalDtoValidation,
+            BindingResult bindingResult
+    ) {
 
-        Optional<RentalModel> rentalOpt = rentalService.getRental(idRental);
-        if (rentalOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
+        if (bindingResult.hasErrors()) {
+            String res = "Une erreur a été detectée lors de la validation des informations renseignées.";
+            Map<String, Object> json = new HashMap<>();
+            json.put("message", res);
+            return ResponseEntity.badRequest().body(json);
         }
 
+        //on essaye de récuperer la location a partir de l'id fournit
+        Optional<RentalModel> rentalOpt = rentalService.getRental(idRental);
+        if (rentalOpt.isEmpty()) {
+            String res = "L'id demandé ne corresponds a aucune location.";
+            Map<String, Object> json = new HashMap<>();
+            json.put("message", res);
+            return ResponseEntity.badRequest().body(json);
+        }
+
+        //on recupere le RentalModel correspondant
         RentalModel rental = rentalOpt.get();
 
-        //recupere l'user courant
+        //recupere l'user courant a partir de l'id inclut dans son JWT
         String idOwner = jwt.getClaimAsString("uid");
         Optional<UserModel> userOpt = userService.getUser(Long.valueOf(idOwner));
         if (userOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
+            String res = "Vous devez etre connecté pour effectuer cette action.";
+            Map<String, Object> json = new HashMap<>();
+            json.put("message", res);
+            return ResponseEntity.badRequest().body(json);
         }
+        // On récupere le UserModel correspondant
         UserModel user = userOpt.get();
-        // verifie si l user courant est l owner ID
-        if(!user.getId().equals(rental.getOwner_id().longValue())){
-            return ResponseEntity.badRequest().build();
+
+        // On verifie si l user courant est bien l owner ID de la location
+        if (!user.getId().equals(rental.getOwner_id().longValue())) {
+            String res = "Vous devez etre le créateur de cette location pour pouvoir la modifier";
+            Map<String, Object> json = new HashMap<>();
+            json.put("message", res);
+            return ResponseEntity.badRequest().body(json);
         }
 
-        // Mise à jour manuelle uniquement des champs non nuls du DTO
-        if (updateRentalDtoValidation.getName() != null)
-            rental.setName(updateRentalDtoValidation.getName());
-        if (updateRentalDtoValidation.getSurface() != null)
-            rental.setSurface(updateRentalDtoValidation.getSurface());
-        if (updateRentalDtoValidation.getPrice() != null)
-            rental.setPrice(updateRentalDtoValidation.getPrice());
-        if (updateRentalDtoValidation.getDescription() != null)
-            rental.setDescription(updateRentalDtoValidation.getDescription());
-
-        // Mettre à jour la date de modification
-        rental.setUpdated_at(new Timestamp(System.currentTimeMillis()));
-
-        // Sauvegarde dans la DB
-        RentalModel updatedRental = rentalService.saveRental(rental);
+        // Mise a jour et sauvegarde dans la base
+        RentalModel updatedRental = rentalService.update(updateRentalDtoValidation, rental);
 
         // Transformation en DTO de sortie
         UpdateRentalDtoResponse updateRentalDtoResponse = new UpdateRentalDtoResponse();
@@ -233,28 +295,10 @@ public class RentalController {
         updateRentalDtoResponse.setCreatedAt(DateUtils.formatTimestamp(updatedRental.getCreated_at()));
         updateRentalDtoResponse.setUpdatedAt(DateUtils.formatTimestamp(updatedRental.getUpdated_at()));
 
-        return ResponseEntity.ok(updateRentalDtoResponse);
-    }
-
-    /**
-     * Delete - Remove a rental
-     *
-     * @param id - The id of the rental to delete
-     * @return 404 or 200
-     */
-    @DeleteMapping("/api/rentals/{id}")
-    public ResponseEntity<Object> deleteRental(@PathVariable Long id) {
-
-        Optional<RentalModel> rentalOpt = rentalService.getRental(id);
-        if (rentalOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        // verifie si l user courant est l owner ID
-
-        RentalModel rental = rentalOpt.get();
-
-        rentalService.deleteRental(rental);
-        return ResponseEntity.ok().build();
+        // renvoi du dto de réponse
+        String res = "Rental updated successfully";
+        Map<String, Object> json = new HashMap<>();
+        json.put("message", res);
+        return ResponseEntity.ok(json);
     }
 }

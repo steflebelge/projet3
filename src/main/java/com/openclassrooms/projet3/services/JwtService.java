@@ -1,45 +1,50 @@
 package com.openclassrooms.projet3.services;
 
-import com.openclassrooms.projet3.auth.PrincipalView;
 import com.openclassrooms.projet3.model.UserModel;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
-import org.springframework.security.oauth2.jwt.*;
+import org.springframework.security.oauth2.jwt.JwsHeader;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Service;
+
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Date;
 
+
+/**
+ * Service Spring pour la génération de JWT (JSON Web Tokens).
+ * <p>
+ * Ce service encapsule la logique de création de tokens JWT pour un utilisateur
+ * ou pour un utilisateur authentifié, en utilisant un JwtEncoder fourni par Spring Security.
+ */
 @Service
 public class JwtService {
 
-    private JwtEncoder jwtEncoder;
+    /**
+     * Encodeur JWT utilisé pour générer les tokens
+     */
+    private final JwtEncoder jwtEncoder;
 
+    /**
+     * Constructeur avec injection du JwtEncoder.
+     *
+     * @param jwtEncoder encodeur JWT fourni par Spring Security
+     */
     public JwtService(JwtEncoder jwtEncoder) {
         this.jwtEncoder = jwtEncoder;
     }
 
-    public String generateJwtToken(Authentication authentication) {
-        PrincipalView princpialView = (PrincipalView) authentication.getPrincipal();
-
-        Instant now = Instant.now();
-        JwtClaimsSet claims = JwtClaimsSet.builder()
-                .issuer("self")
-                .issuedAt(now)
-                .expiresAt(now.plus(1, ChronoUnit.DAYS))
-                .subject(princpialView.email())
-                .claim("uid", String.valueOf(princpialView.id()))
-                .claim("name", princpialView.username())
-                .build();
-
-        JwtEncoderParameters jwtEncoderParameters = JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims);
-
-        // Retour du token sous forme de chaîne
-        return this.jwtEncoder.encode(jwtEncoderParameters).getTokenValue();
-    }
-
+    /**
+     * Génère un JWT directement à partir d'un objet UserModel.
+     * Utile pour créer un token après l'inscription ou la connexion d'un utilisateur.
+     *
+     * @param user utilisateur pour lequel générer le token
+     * @return token JWT sous forme de chaîne
+     */
     public String generateJwtTokenForUser(UserModel user) {
         Instant now = Instant.now();
+
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer("self")
                 .issuedAt(now)
@@ -49,9 +54,9 @@ public class JwtService {
                 .claim("name", user.getName())
                 .build();
 
-        JwtEncoderParameters jwtEncoderParameters = JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims);
+        JwtEncoderParameters jwtEncoderParameters =
+                JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims);
 
-        // Retour du token sous forme de chaîne
         return this.jwtEncoder.encode(jwtEncoderParameters).getTokenValue();
     }
 }
