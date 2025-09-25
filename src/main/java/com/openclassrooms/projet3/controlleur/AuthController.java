@@ -6,6 +6,7 @@ import com.openclassrooms.projet3.dto.RegisterUserDtoValidation;
 import com.openclassrooms.projet3.model.UserModel;
 import com.openclassrooms.projet3.service.UserService;
 import com.openclassrooms.projet3.services.JwtService;
+import com.openclassrooms.projet3.utils.DateUtils;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -118,9 +119,8 @@ public class AuthController {
         getCurrentUserDtoResponse.setId(user.getId());
         getCurrentUserDtoResponse.setEmail(user.getEmail());
         getCurrentUserDtoResponse.setName(user.getName());
-        getCurrentUserDtoResponse.setPassword(user.getPassword());
-        getCurrentUserDtoResponse.setCreatedAt(user.getCreated_at());
-        getCurrentUserDtoResponse.setUpdatedAt(user.getUpdated_at());
+        getCurrentUserDtoResponse.setCreatedAt(DateUtils.formatTimestamp(user.getCreated_at()));
+        getCurrentUserDtoResponse.setUpdatedAt(DateUtils.formatTimestamp(user.getUpdated_at()));
 
         return ResponseEntity.ok(getCurrentUserDtoResponse);
     }

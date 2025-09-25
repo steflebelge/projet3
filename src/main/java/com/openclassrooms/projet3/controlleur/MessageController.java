@@ -5,6 +5,7 @@ import com.openclassrooms.projet3.dto.CreateMessageDtoValidation;
 import com.openclassrooms.projet3.dto.CreateRentalDtoResponse;
 import com.openclassrooms.projet3.model.MessageModel;
 import com.openclassrooms.projet3.service.MessageService;
+import com.openclassrooms.projet3.utils.DateUtils;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -41,8 +42,8 @@ public class MessageController {
         createMessageDtoResponse.setMessage(savedMessage.getMessage());
         createMessageDtoResponse.setRental_id(savedMessage.getRental_id());
         createMessageDtoResponse.setUser_id(savedMessage.getUser_id());
-        createMessageDtoResponse.setCreated_at(savedMessage.getCreated_at());
-        createMessageDtoResponse.setUpdated_at(savedMessage.getUpdated_at());
+        createMessageDtoResponse.setCreated_at(DateUtils.formatTimestamp(savedMessage.getCreated_at()));
+        createMessageDtoResponse.setUpdated_at(DateUtils.formatTimestamp(savedMessage.getUpdated_at()));
 
         return ResponseEntity.ok(createMessageDtoResponse);
     }

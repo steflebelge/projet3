@@ -3,8 +3,6 @@ package com.openclassrooms.projet3.dto;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.math.BigDecimal;
 
 @Data
@@ -18,8 +16,6 @@ public class UpdateRentalDtoValidation {
 
     @DecimalMin(value = "0.0", inclusive = false, message = "Le prix doit être positif")
     private BigDecimal price;
-
-    private MultipartFile picture;
 
     @Size(max = 2000, message = "La description ne peut pas dépasser 2000 caractères")
     private String description;

@@ -1,5 +1,6 @@
 package com.openclassrooms.projet3.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.sql.Timestamp;
@@ -13,9 +14,9 @@ public class GetCurrentUserDtoResponse {
 
     private String name;
 
-    private String password;
+    @JsonProperty("created_at")
+    private String createdAt;
 
-    private Timestamp createdAt;
-
-    private Timestamp updatedAt;
+    @JsonProperty("updated_at")
+    private String updatedAt;
 }

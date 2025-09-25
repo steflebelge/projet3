@@ -3,6 +3,7 @@ package com.openclassrooms.projet3.controlleur;
 import com.openclassrooms.projet3.dto.GetUserByIdDtoResponse;
 import com.openclassrooms.projet3.model.UserModel;
 import com.openclassrooms.projet3.service.UserService;
+import com.openclassrooms.projet3.utils.DateUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,9 +22,9 @@ public class UserController {
      * Read - Get a specific user from id
      * @return A GetUserByIdDtoResponse of the user object
      */
-    @GetMapping("/api/users/{id}")
+    @GetMapping("/api/user/{id}")
     public ResponseEntity<GetUserByIdDtoResponse> getUserById(@PathVariable Long id){
-        Optional<UserModel> userOpt = userService.getUser(Long.valueOf(id));
+        Optional<UserModel> userOpt = userService.getUser(id);
 
         if (userOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -36,8 +37,8 @@ public class UserController {
         getUserByIdDtoResponse.setId(user.getId());
         getUserByIdDtoResponse.setEmail(user.getEmail());
         getUserByIdDtoResponse.setName(user.getName());
-        getUserByIdDtoResponse.setCreatedAt(user.getCreated_at());
-        getUserByIdDtoResponse.setUpdatedAt(user.getUpdated_at());
+        getUserByIdDtoResponse.setCreatedAt(DateUtils.formatTimestamp(user.getCreated_at()));
+        getUserByIdDtoResponse.setUpdatedAt(DateUtils.formatTimestamp(user.getUpdated_at()));
 
         return ResponseEntity.ok(getUserByIdDtoResponse);
     }

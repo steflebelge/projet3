@@ -1,5 +1,6 @@
 package com.openclassrooms.projet3.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -19,9 +20,12 @@ public class GetRentalByIdDtoResponse {
 
     private String description;
 
+    @JsonProperty("owner_id")
     private Integer ownerId;
 
-    private Timestamp createdAt;
+    @JsonProperty("created_at")
+    private String createdAt;
 
-    private Timestamp updatedAt;
+    @JsonProperty("updated_at")
+    private String updatedAt;
 }

@@ -1,5 +1,6 @@
 package com.openclassrooms.projet3.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -22,9 +23,12 @@ public class CreateRentalDtoResponse {
 
     private String description;
 
+    @JsonProperty("owner_id")
     private Integer ownerId;
 
-    private Timestamp createdAt;
+    @JsonProperty("created_at")
+    private String createdAt;
 
-    private Timestamp updatedAt;
+    @JsonProperty("updated_at")
+    private String updatedAt;
 }

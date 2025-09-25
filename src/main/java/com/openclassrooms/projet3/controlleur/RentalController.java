@@ -5,6 +5,7 @@ import com.openclassrooms.projet3.model.RentalModel;
 import com.openclassrooms.projet3.model.UserModel;
 import com.openclassrooms.projet3.service.RentalService;
 import com.openclassrooms.projet3.service.UserService;
+import com.openclassrooms.projet3.utils.DateUtils;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -62,8 +63,8 @@ public class RentalController {
             getRentalByIdDtoResponse.setPicture(rental.getPicture());
             getRentalByIdDtoResponse.setDescription(rental.getDescription());
             getRentalByIdDtoResponse.setOwnerId(rental.getOwner_id());
-            getRentalByIdDtoResponse.setCreatedAt(rental.getCreated_at());
-            getRentalByIdDtoResponse.setUpdatedAt(rental.getUpdated_at());
+            getRentalByIdDtoResponse.setCreatedAt(DateUtils.formatTimestamp(rental.getCreated_at()));
+            getRentalByIdDtoResponse.setUpdatedAt(DateUtils.formatTimestamp(rental.getUpdated_at()));
 
             dtoList.add(getRentalByIdDtoResponse);
         }
@@ -95,8 +96,8 @@ public class RentalController {
         getRentalByIdDtoResponse.setPicture(rental.getPicture());
         getRentalByIdDtoResponse.setDescription(rental.getDescription());
         getRentalByIdDtoResponse.setOwnerId(rental.getOwner_id());
-        getRentalByIdDtoResponse.setCreatedAt(rental.getCreated_at());
-        getRentalByIdDtoResponse.setUpdatedAt(rental.getUpdated_at());
+        getRentalByIdDtoResponse.setCreatedAt(DateUtils.formatTimestamp(rental.getCreated_at()));
+        getRentalByIdDtoResponse.setUpdatedAt(DateUtils.formatTimestamp(rental.getUpdated_at()));
 
         return ResponseEntity.ok(getRentalByIdDtoResponse);
     }
@@ -167,8 +168,8 @@ public class RentalController {
         createRentalDtoResponse.setPicture(savedRental.getPicture());
         createRentalDtoResponse.setDescription(savedRental.getDescription());
         createRentalDtoResponse.setOwnerId(savedRental.getOwner_id());
-        createRentalDtoResponse.setCreatedAt(savedRental.getCreated_at());
-        createRentalDtoResponse.setUpdatedAt(savedRental.getUpdated_at());
+        createRentalDtoResponse.setCreatedAt(DateUtils.formatTimestamp(savedRental.getCreated_at()));
+        createRentalDtoResponse.setUpdatedAt(DateUtils.formatTimestamp(savedRental.getUpdated_at()));
 
         return ResponseEntity.ok(createRentalDtoResponse);
     }
@@ -179,55 +180,41 @@ public class RentalController {
      * @param updateRentalDtoValidation A UpdateRentalDtoValidation object
      * @return A UpdateRentalDtoValidation of the rental object
      */
-    @PutMapping(path = "/api/rentals/{id}", consumes = "multipart/form-data")
+    @PutMapping(path = "/api/rentals/{idRental}", consumes = "multipart/form-data")
     public ResponseEntity<UpdateRentalDtoResponse> updateRental(
-            @PathVariable Long id,
+            @PathVariable Long idRental,
+            @AuthenticationPrincipal Jwt jwt,
             @ModelAttribute @Valid UpdateRentalDtoValidation updateRentalDtoValidation) {
 
-        Optional<RentalModel> rentalOpt = rentalService.getRental(id);
+        Optional<RentalModel> rentalOpt = rentalService.getRental(idRental);
         if (rentalOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
         RentalModel rental = rentalOpt.get();
 
+        //recupere l'user courant
+        String idOwner = jwt.getClaimAsString("uid");
+        Optional<UserModel> userOpt = userService.getUser(Long.valueOf(idOwner));
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        UserModel user = userOpt.get();
         // verifie si l user courant est l owner ID
-
-        String savedFileName = null;
-        // Si l'image est présente
-        MultipartFile pictureFile = updateRentalDtoValidation.getPicture();
-        String fileUrl = null;
-        if (!pictureFile.isEmpty()) {
-            try {
-                // Générer un nom unique pour éviter les collisions
-                String extension = "";
-                String originalName = pictureFile.getOriginalFilename();
-                if (originalName.isEmpty() || !originalName.contains(".")) {
-                    return ResponseEntity.badRequest().build();
-                }
-                extension = originalName.substring(originalName.lastIndexOf("."));
-                savedFileName = UUID.randomUUID() + extension;
-
-                // Sauvegarder sur le disque
-                File dest = new File(uploadDir + File.separator + savedFileName);
-                pictureFile.transferTo(dest);
-            } catch (IOException e) {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .build();
-            }
-
-            String baseUrl = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
-            fileUrl = baseUrl + "/uploads/" + savedFileName;
+        if(!user.getId().equals(rental.getOwner_id().longValue())){
+            return ResponseEntity.badRequest().build();
         }
 
         // Mise à jour manuelle uniquement des champs non nuls du DTO
-        if (updateRentalDtoValidation.getName() != null) rental.setName(updateRentalDtoValidation.getName());
-        if (updateRentalDtoValidation.getSurface() != null) rental.setSurface(updateRentalDtoValidation.getSurface());
-        if (updateRentalDtoValidation.getPrice() != null) rental.setPrice(updateRentalDtoValidation.getPrice());
-        if (!pictureFile.isEmpty()) rental.setPicture(fileUrl);
+        if (updateRentalDtoValidation.getName() != null)
+            rental.setName(updateRentalDtoValidation.getName());
+        if (updateRentalDtoValidation.getSurface() != null)
+            rental.setSurface(updateRentalDtoValidation.getSurface());
+        if (updateRentalDtoValidation.getPrice() != null)
+            rental.setPrice(updateRentalDtoValidation.getPrice());
         if (updateRentalDtoValidation.getDescription() != null)
             rental.setDescription(updateRentalDtoValidation.getDescription());
-//        if (updateRentalDtoValidation.getOwnerId() != null) rental.setOwner_id(updateRentalDtoValidation.getOwnerId());
+
         // Mettre à jour la date de modification
         rental.setUpdated_at(new Timestamp(System.currentTimeMillis()));
 
@@ -243,8 +230,8 @@ public class RentalController {
         updateRentalDtoResponse.setPicture(updatedRental.getPicture());
         updateRentalDtoResponse.setDescription(updatedRental.getDescription());
         updateRentalDtoResponse.setOwnerId(updatedRental.getOwner_id());
-        updateRentalDtoResponse.setCreatedAt(updatedRental.getCreated_at());
-        updateRentalDtoResponse.setUpdatedAt(updatedRental.getUpdated_at());
+        updateRentalDtoResponse.setCreatedAt(DateUtils.formatTimestamp(updatedRental.getCreated_at()));
+        updateRentalDtoResponse.setUpdatedAt(DateUtils.formatTimestamp(updatedRental.getUpdated_at()));
 
         return ResponseEntity.ok(updateRentalDtoResponse);
     }
