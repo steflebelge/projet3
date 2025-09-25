@@ -9,7 +9,6 @@ import java.util.Optional;
 
 /**
  * Service Spring pour gérer la logique métier liée aux utilisateurs.
- * <p>
  * Ce service utilise le UserRepository pour effectuer les opérations CRUD
  * sur les utilisateurs et encapsule la logique métier associée.
  */
@@ -27,7 +26,6 @@ public class UserService {
      *
      * @param id identifiant de l'utilisateur
      * @return Optional contenant l'utilisateur si trouvé, sinon vide
-     * <p>
      * Remarque : si l'utilisateur n'est pas trouvé, l'Optional sera vide.
      */
     public Optional<UserModel> getUser(final Long id) {

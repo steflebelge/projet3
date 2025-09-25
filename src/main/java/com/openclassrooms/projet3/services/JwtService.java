@@ -14,7 +14,6 @@ import java.time.temporal.ChronoUnit;
 
 /**
  * Service Spring pour la génération de JWT (JSON Web Tokens).
- * <p>
  * Ce service encapsule la logique de création de tokens JWT pour un utilisateur
  * ou pour un utilisateur authentifié, en utilisant un JwtEncoder fourni par Spring Security.
  */
